@@ -15,10 +15,13 @@ class Loc:
 
 
 class Player:
-    def __init__(self, hp, mhp, inv):
+    def __init__(self, hp, mhp, inv, living, holding, wearing):
         self.hp = hp
         self.mhp = mhp
         self.inv = inv
+        self.living = living
+        self.holding = holding
+        self.wearing = wearing
 
     def health(self):
         output = "["
@@ -28,7 +31,7 @@ class Player:
             else:
                 output += "\u2591"
         output += "]"
-        print("Your HP is ", output, str(self.hp)+"/"+str(self.mhp))
+        print("HP: ", output, str(self.hp)+"/"+str(self.mhp))
 
     def setHP(self, newHP):
         self.hp = newHP
@@ -42,22 +45,28 @@ class Player:
                 print("Healed. ", end="")
                 self.health()
             else:
-                print(f"{heal} is not in your inventory.")
+                print(f"{heal.name} is not in your inventory.")
         else:
-            print(f"{heal} is not a heal.")
+            print(f"{heal.name} is not a heal.")
     
+    def attack(self, target):
+        target.setHP -= holding.dmg
+        if target.hp < 1:
+            target.living = False
+
     def getinv(self):
         for x in self.inv:
             print(x)
 
     def addinv(self, item):
-        inv.append(item)
+        self.inv.append(item)
 
 
 class Item:
     def __init__(self, name, desc, owner):
         self.name = name
         self.desc = desc
+        self.owner = owner
 
 
 class Heal(Item):
@@ -65,13 +74,19 @@ class Heal(Item):
         Item.__init__(self, name, desc, owner)
         self.amount = amount
 
+class Weapon(Item):
+    def __init__(self, name, desc, owner, dmg):
+        Item.__init__(self, name, desc, owner)
+        self.dmg = dmg
+
 
 sys.stdout.write("\033[2J\033[H")
 print("TaRPiG - Text Roleplaying game")
 
-hmm = Player(5, 10, ["car", "apple", "banana"])
+hmm = Player(5, 10, ["car", "apple", "banana"], True, "car", "apple")
 print("You are in a field")
 awesom = Heal("poop", "some poop", "some guy", 5)
+#hmm.addinv(awesom)
 hmm.health()
 hmm.heal(awesom)
 print(isinstance(awesom, Item))
