@@ -1,17 +1,17 @@
 #! /usr/bin/python3
-# This is just a bunch of class definitions
+# This is just a bunch of class definitions... for now
 import sys
-"""
-class Game:
-    def __init__(self, loc, move, file)
-"""
+
+#class Game:
+#    def __init__(self, loc, move, file)
+
 
 
 class Loc:
     def __init__(self, cord, name, objs):
         self.cord = cord
         self.name = name
-        self.objs = [] ###################################################
+        self.objs = []
 
 
 class Player:
@@ -24,7 +24,7 @@ class Player:
         output = "["
         for x in range(1, self.mhp+1):
             if x <= self.hp:
-                output += "\u2588" # The native python IDE literally doesn't support a feature of python. Not "\UXXXXXXXX" only "\uXXXX"
+                output += "\u2588"
             else:
                 output += "\u2591"
         output += "]"
@@ -37,9 +37,12 @@ class Player:
 
     def heal(self, heal):
         if isinstance(heal, Heal):
-            self.setHP(self.hp + heal.amount)
-            print("Healed. ", end="")
-            self.health()
+            if heal in self.inv:
+                self.setHP(self.hp + heal.amount)
+                print("Healed. ", end="")
+                self.health()
+            else:
+                print(f"{heal} is not in your inventory.")
         else:
             print(f"{heal} is not a heal.")
     
