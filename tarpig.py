@@ -53,7 +53,13 @@ class Player:
             print(f"{heal.name} is not a heal.")
     
     def attack(self, target):
-        target.setHP(target.hp-self.holding.dmg)
+        if isinstance(target, Player):
+            if isinstance(self.holding, Weapon):
+                target.setHP(target.hp-self.holding.dmg)
+            else:
+                print(f"{self.holding.name} is not a weapon.")
+        else:
+            print(f"{target.name} is not a person/animal")
 
     def getinv(self):
         for x in self.inv:
@@ -84,9 +90,10 @@ class Weapon(Item):
 sys.stdout.write("\033[2J\033[H")
 print("TaRPiG - Text Roleplaying game")
 ayy = Weapon("ayy", "", "h", 5)
-hmm = Player(5, 10, [ayy, "apple", "banana"], True, ayy, "apple")
-smh = Player(5, 10, [ayy, "apple", "banana"], True, ayy, "apple")
-awesom = Heal("poop", "some poop", "some guy", 5)
+poop = Item("poop", "poop", "poop")
+hmm = Player(5, 10, [poop], True, poop, "apple")
+smh = Player(5, 10, [poop], True, poop, "apple")
+awesom = Heal("awesom", "some poop", "some guy", 5)
 
 hmm.health()
 smh.attack(hmm)
