@@ -8,21 +8,22 @@ import sys
 
 
 class Loc:
-    def __init__(self, cord, name, objs):
+    def __init__(self, cord, name):
         self.cord = cord
         self.name = name
-        self.objs = objs
 
 
 class Player:
-    def __init__(self, name, hp, mhp, living, inv, holding, wearing):
+    def __init__(self, name, hp, mhp, living, inv, loc):
         self.name = name
         self.hp = hp
         self.mhp = mhp
         self.living = living
         self.inv = inv
-        self.holding = holding
-        self.wearing = wearing
+        if len(self.inv) > 1:
+            self.holding = inv[0]
+            self.wearing = inv[1]
+        self.loc = loc
 
     def health(self):
         output = "["
@@ -32,7 +33,7 @@ class Player:
             else:
                 output += "\u2591"
         output += "]"
-        print(f"@{self.name}: HP: ", output, str(self.hp)+"/"+str(self.mhp))
+        print(f"@{self.name}: HP:", output, str(self.hp)+"/"+str(self.mhp))
 
     def setHP(self, newHP):
         self.hp = newHP
@@ -41,6 +42,9 @@ class Player:
         if self.hp <= 0:
             self.living = False
             self.hp = 0
+
+    def getLoc(self):
+        print(f"@{self.name}: Location: {self.loc.name}.")
 
     def heal(self, heal):
         if isinstance(heal, Heal):
@@ -57,6 +61,7 @@ class Player:
         if isinstance(target, Player):
             if isinstance(self.holding, Weapon):
                 target.setHP(target.hp-self.holding.dmg)
+                print(f"@{self.name}: {target.name} took {self.holding.dmg} damage. ({str(target.hp)}/{str(target.mhp)})")
             else:
                 print(f"@{self.name}: {self.holding.name} is not a weapon.")
         else:
@@ -64,7 +69,7 @@ class Player:
 
     def getinv(self):
         for x in self.inv:
-            print(x)
+            print(x.name)
 
     def addinv(self, item):
         self.inv.append(item)
@@ -75,6 +80,7 @@ class Item:
         self.name = name
         self.desc = desc
         self.owner = owner
+        self.owner.inv.append(self)
 
 
 class Heal(Item):
@@ -90,15 +96,18 @@ class Weapon(Item):
 
 sys.stdout.write("\033[2J\033[H")
 print("TaRPiG - Text Roleplaying game")
-ayy = Weapon("ayy", "", "h", 5)
-poop = Item("poop", "poop", "poop")
-hmm = Player("hmm", 5, 10, True, [ayy], ayy, "apple")
-smh = Player("smh", 5, 10, True, [ayy], ayy, "apple")
-awesom = Heal("awesom", "some poop", "some guy", 5)
+emptyplayer = Player("emptyplayer", 3000, 3000, True, [], "")
+emptyobj0 = Item("empty0", "", emptyplayer)
 
-hmm.health()
-smh.attack(ayy)
-hmm.health()
-print("Is hmm living?", hmm.living)
+
+castle = Loc(5, "castle")
+# hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
+# smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
+
+# hmm.health()
+# smh.attack(hmm)
+# hmm.getLoc()
+emptyplayer.getinv()
+# print("Is hmm living?", hmm.living)
 print("You are standing in a field")
 input("hmm")
