@@ -2,8 +2,9 @@
 # This is just a bunch of class definitions... for now
 import sys
 
-red = "\033[1;31m"
-reset = "\033[1;0m"
+red = "\x1b[1;31m"
+green = "\x1b[1;92m"
+reset = "\x1b[1;0m"
 
 #class Game:
 #    def __init__(self, loc, move, file)
@@ -36,7 +37,7 @@ class Player:
             else:
                 output += "\u2591"
         output += "]"
-        print(f"@{self.name}: HP:", output, str(self.hp)+"/"+str(self.mhp))
+        print(f"@{self.name}: HP: {output} {self.hp}/{self.mhp}")
 
     def setHP(self, newHP):
         self.hp = newHP
@@ -56,9 +57,9 @@ class Player:
                 print(f"@{self.name}: Healed. ", end="")
                 self.health()
             else:
-                print(red + f"@{self.name}: {heal.name} is not in your inventory." + reset)
+                print(red + f"ERROR: @{self.name}: {heal.name} is not in your inventory." + reset)
         else:
-            print(red + f"@{self.name}: {heal.name} is not a heal." + reset)
+            print(red + f"ERROR: @{self.name}: {heal.name} is not a heal." + reset)
 
     def getinv(self):
         output = f"@{self.name}: Inventory:\n"
@@ -82,9 +83,9 @@ class Player:
                 target.setHP(target.hp-self.holding.dmg)
                 print(f"@{self.name}: {target.name} took {self.holding.dmg} damage. ({str(target.hp)}/{str(target.mhp)})")
             else:
-                print(red + f"@{self.name}: {self.holding.name} is not a weapon." + reset)
+                print(red + f"ERROR: @{self.name}: {self.holding.name} is not a weapon." + reset)
         else:
-            print(red + f"@{self.name}: {target.name} is not a person/animal" + reset)
+            print(red + f"ERROR: @{self.name}: {target.name} is not a person/animal" + reset)
 
 
 class Item:
@@ -107,7 +108,13 @@ class Weapon(Item):
         self.dmg = dmg
 
 
-sys.stdout.write("\033[2J\033[H")
+class Cmd:
+    def __init__(self, name, func, *args):
+        self.name = name
+        self.func = func
+        self.args = args
+
+print("\x1b[2J\x1b[H")
 print("TaRPiG - Text Roleplaying game")
 emptyplayer = Player("emptyplayer", 3000, 3000, [], "")
 emptyobj0 = Item("empty0", "", emptyplayer)
@@ -115,9 +122,11 @@ emptyobj1 = Item("empty1", "", emptyplayer)
 emptyobj2 = Item("empty2", "", emptyplayer)
 emptyobj3 = Item("empty3", "", emptyplayer)
 
-testplayer = Player("testplayer", 3000, 3000, [emptyobj0, emptyobj1, emptyobj2], "")
+emptyweapon0 = Weapon("emptyweapon0", "", emptyplayer, 28)
 
-
+testplayer = Player("testplayer", 29, 30, [emptyobj0, emptyobj1, emptyobj2], "")
+user = Player("user", 4, 4, [emptyweapon0, emptyobj0, emptyobj1], "")
+players = {emptyplayer.name: emptyplayer, user.name: user, testplayer.name: testplayer}
 castle = Loc(5, "castle")
 # hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
 # smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
@@ -125,9 +134,20 @@ castle = Loc(5, "castle")
 # hmm.health()
 # smh.attack(hmm)
 # hmm.getLoc()
-testplayer.__init__(emptyplayer.name, emptyplayer.hp, emptyplayer.mhp, emptyplayer.inv, emptyplayer.loc)
-emptyplayer.getinv()
-testplayer.getinv()
+#testplayer.__init__(emptyplayer.name, emptyplayer.hp, emptyplayer.mhp, emptyplayer.inv, emptyplayer.loc)
 # print("Is hmm living?", hmm.living)
 print("You are standing in a field")
-input("hmm")
+
+
+while True:
+    cmd = input("> ")
+    cmd = cmd.split(" ")
+    if cmd[0].lower() in ("quit", "q", "exit"):
+        break
+    if cmd[0] == "attack":
+        user.attack(players[cmd[1]])
+    if cmd[0] == "health":
+        if len(cmd) > 1:
+            players[cmd[1]].health()
+        else:
+            user.health()
