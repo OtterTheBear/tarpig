@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 # This is just a bunch of class definitions... for now
-import sys
+import traceback
 
 red = "\x1b[1;31m"
 green = "\x1b[1;92m"
@@ -18,15 +18,14 @@ class Loc:
 
 
 class Player:
-    def __init__(self, name, hp, mhp, inv, loc):
+    def __init__(self, name, hp, mhp, loc):
         self.name = name
         self.hp = hp
         self.mhp = mhp
         self.living = (self.hp > 0)
-        self.inv = inv
-        if len(self.inv) > 1:
-            self.holding = inv[0]
-            self.wearing = inv[1]
+        self.inv = {}
+        self.holding = None
+        self.wearing = None
         self.loc = loc
 
     def health(self):
@@ -51,32 +50,52 @@ class Player:
         print(f"@{self.name}: Location: {self.loc.name}.")
 
     def heal(self, heal):
+        healobj = None
         if isinstance(heal, Heal):
-            if heal in self.inv:
-                self.setHP(self.hp + heal.amount)
-                print(f"@{self.name}: Healed. ", end="")
-                self.health()
+            if heal in self.inv.values():
+                healObj = heal
             else:
                 print(red + f"ERROR: @{self.name}: {heal.name} is not in your inventory." + reset)
+                return
+        elif isinstance(heal, str):
+            if heal in self.inv:
+                healObj = self.inv[heal]
+                if not isinstance(healObj, Heal):
+                    print(red + f"ERROR: @{self.name}: {heal} is not a heal object in your inventory." + reset)
+                    return
+            else:
+                print(red + f"ERROR: @{self.name}: {heal} is not in your inventory." + reset)
+                return
         else:
-            print(red + f"ERROR: @{self.name}: {heal.name} is not a heal." + reset)
+            print(red + f"ERROR: @{self.name}: {heal} is not a heal in your inventory." + reset)
+            return
+
+        self.setHP(self.hp + healObj.amount)
+        print(f"@{self.name}: Healed. ", end="")
+        self.health()
+
 
     def getinv(self):
         output = f"@{self.name}: Inventory:\n"
-        for x in self.inv:
-            if x == self.inv[0]:
-                output += " *"+ x.name + "\n"
-            elif x == self.inv[1]:
-                output += "**" + x.name + "\n"
+        for (k, v) in self.inv.items():
+            if v == self.holding:
+                output += " *" + k + "\n"
+            elif x == self.wearing:
+                output += "**" + k + "\n"
             else:
-                output += "  " + x.name + "\n"
-        output += "\b\b\b\b"
+                output += "  " + k + "\n"
         print(output)
 
     def addinv(self, item):
-        self.inv.append(item)
+        self.inv[item.name] = item
 
-    
+    def hold(self, item):
+        self.holding = item
+
+    def wear(self, item):
+        self.wearing = item
+
+
     def attack(self, target):
         if isinstance(target, Player):
             if isinstance(self.holding, Weapon):
@@ -93,8 +112,7 @@ class Item:
         self.name = name
         self.desc = desc
         self.owner = owner
-        self.owner.inv.append(self)
-        owner.__init__(owner.name, owner.hp, owner.mhp, owner.inv, owner.loc)
+        self.owner.addinv(self)
 
 
 class Heal(Item):
@@ -114,40 +132,74 @@ class Cmd:
         self.func = func
         self.args = args
 
-print("\x1b[2J\x1b[H")
-print("TaRPiG - Text Roleplaying game")
-emptyplayer = Player("emptyplayer", 3000, 3000, [], "")
-emptyobj0 = Item("empty0", "", emptyplayer)
-emptyobj1 = Item("empty1", "", emptyplayer)
-emptyobj2 = Item("empty2", "", emptyplayer)
-emptyobj3 = Item("empty3", "", emptyplayer)
-
-emptyweapon0 = Weapon("emptyweapon0", "", emptyplayer, 28)
-
-testplayer = Player("testplayer", 29, 30, [emptyobj0, emptyobj1, emptyobj2], "")
-user = Player("user", 4, 4, [emptyweapon0, emptyobj0, emptyobj1], "")
-players = {emptyplayer.name: emptyplayer, user.name: user, testplayer.name: testplayer}
-castle = Loc(5, "castle")
-# hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
-# smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
-
-# hmm.health()
-# smh.attack(hmm)
-# hmm.getLoc()
-#testplayer.__init__(emptyplayer.name, emptyplayer.hp, emptyplayer.mhp, emptyplayer.inv, emptyplayer.loc)
-# print("Is hmm living?", hmm.living)
-print("You are standing in a field")
+def getTargetUser(cmd, players, user):
+    if len(cmd) > 1:
+        target = players[cmd[1]]
+    else:
+        target = user
+    return target
 
 
-while True:
-    cmd = input("> ")
-    cmd = cmd.split(" ")
-    if cmd[0].lower() in ("quit", "q", "exit"):
-        break
-    if cmd[0] == "attack":
-        user.attack(players[cmd[1]])
-    if cmd[0] == "health":
-        if len(cmd) > 1:
-            players[cmd[1]].health()
-        else:
-            user.health()
+def main():
+    print("\x1b[2J\x1b[H")
+    print("TaRPiG - Text Roleplaying game")
+    emptyplayer = Player("emptyplayer", 3000, 3000, "")
+    emptyobj0 = Item("empty0", "", emptyplayer)
+    emptyobj1 = Item("empty1", "", emptyplayer)
+    emptyobj2 = Item("empty2", "", emptyplayer)
+    emptyobj3 = Item("empty3", "", emptyplayer)
+
+    testplayer = Player("testplayer", 29, 30, "")
+    user = Player("user", 4, 4,  "")
+    emptyweapon0 = Weapon("emptyweapon0", "", user, 28)
+    players = {emptyplayer.name: emptyplayer, user.name: user, testplayer.name: testplayer}
+    user.hold(emptyweapon0)
+    emptyplayer.hold(emptyobj0)
+    castle = Loc(5, "castle")
+    # hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
+    # smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
+
+    # hmm.health()
+    # smh.attack(hmm)
+    # hmm.getLoc()
+    #testplayer.__init__(emptyplayer.name, emptyplayer.hp, emptyplayer.mhp, emptyplayer.inv, emptyplayer.loc)
+    # print("Is hmm living?", hmm.living)
+    print("You are standing in a field")
+
+    while True:
+        try:
+            cmd = input("> ")
+            cmd = cmd.split(" ")
+            if cmd[0].lower() in ("quit", "q", "exit"):
+                break
+
+            if cmd[0] == "attack":
+                user.attack(getTargetUser(cmd, players, user))
+            if cmd[0] == "health":
+                getTargetUser(cmd, players, user).health()
+            if cmd[0] == "heal":
+                user.heal(cmd[1])
+            if cmd[0] in ("inventory", "inv", "i"):
+                user.getinv()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            break
+        except:
+            traceback.print_exc()
+            continue
+
+if __name__ == "__main__":
+    import os
+    import atexit
+    import readline
+
+    histfile = os.path.join(os.path.expanduser("~"), ".python_history")
+    try:
+        readline.read_history_file(histfile)
+    except FileNotFoundError:
+        pass
+
+    atexit.register(readline.write_history_file, histfile)
+
+    main()
+
