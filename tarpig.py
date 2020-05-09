@@ -36,7 +36,7 @@ class Player:
             else:
                 output += "\u2591"
         output += "]"
-        print(f"@{self.name}: HP: {output} {self.hp}/{self.mhp}")
+        print(f"@{self.name}: HP: {output} {self.hp}/{self.mhp}" + " " + ("(Living)" if self.living else "(Dead)"))
 
     def setHP(self, newHP):
         self.hp = newHP
@@ -74,23 +74,49 @@ class Player:
         print(f"@{self.name}: Healed. ", end="")
         self.health()
 
-
     def getinv(self):
         output = f"@{self.name}: Inventory:\n"
         for (k, v) in self.inv.items():
             if v == self.holding:
                 output += " *" + k + "\n"
-            elif x == self.wearing:
+            elif v == self.wearing:
                 output += "**" + k + "\n"
             else:
                 output += "  " + k + "\n"
-        print(output)
+        return output
 
     def addinv(self, item):
         self.inv[item.name] = item
 
+
+    def mvinv(self, target, item):
+        itemobj = None
+        if isinstance(item, Item):
+            if item in self.inv.values():
+                itemobj = item
+            else:
+                print(red + f"ERROR: @{self.name}: {item} is not in your inventory." + reset)
+                return
+        elif isinstance(item, str):
+            if item in self.inv:
+                itemobj = self.inv[item]
+            else:
+                print(red + f"ERROR: @{self.name}: {item} is not in your inventory." + reset)
+                return
+        else:
+            print(red + f"ERROR: @{self.name}: {item} is not item." + reset)
+            return
+        target.inv[itemobj.name] = itemobj
+        del self.inv[itemobj.name]
+
     def hold(self, item):
-        self.holding = item
+        if isinstance(item, Item):
+            if item in self.inv.values():
+                self.holding = item
+            else:
+                print(red + f"ERROR: @{user.name}: {item.name} is not in your inventory." + reset)
+        else:
+            print(red + f"ERROR: @{user.name}: {item.name} is not an item." + reset)
 
     def wear(self, item):
         self.wearing = item
@@ -169,21 +195,35 @@ def main():
     while True:
         try:
             cmd = input("> ")
+            cmd = cmd.strip()
             cmd = cmd.split(" ")
             if cmd[0].lower() in ("quit", "q", "exit"):
                 break
 
-            if cmd[0] == "attack":
-                user.attack(getTargetUser(cmd, players, user))
-            if cmd[0] == "health":
+            elif cmd[0] == "attack":
+                if len(cmd) > 1:
+                    user.attack(getTargetUser(cmd, players, user))
+                else:
+                    raise IndexError
+            elif cmd[0] == "health":
                 getTargetUser(cmd, players, user).health()
-            if cmd[0] == "heal":
+            elif cmd[0] == "heal":
                 user.heal(cmd[1])
-            if cmd[0] in ("inventory", "inv", "i"):
-                user.getinv()
+            elif cmd[0] in ("inventory", "inv", "i"):
+                print(user.getinv())
+            elif cmd[0] == "hold":
+                user.hold(cmd[1])
+            elif cmd[0] == "gift":
+                user.mvinv(getTargetUser(cmd, players, user), cmd[2])
+            else:
+                if cmd[0] != "":
+                    print(red + f"ERROR: @{user.name}: \"{cmd[0]}\" is not a command." + reset)
+            print(emptyplayer.getinv())
         except (KeyboardInterrupt, EOFError):
             print()
             break
+        except IndexError:
+            print(red + f"ERROR: not enough arguments." + reset)
         except:
             traceback.print_exc()
             continue
