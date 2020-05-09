@@ -110,23 +110,54 @@ class Player:
         del self.inv[itemobj.name]
 
     def hold(self, item):
+        itemobj = None
         if isinstance(item, Item):
             if item in self.inv.values():
-                self.holding = item
+                itemobj = item
             else:
-                print(red + f"ERROR: @{user.name}: {item.name} is not in your inventory." + reset)
+                print(red + f"ERROR: @{self.name}: {item} is not in your inventory." + reset)
+                return
+        elif isinstance(item, str):
+            if item in self.inv:
+                itemobj = self.inv[item]
+            else:
+                print(red + f"ERROR: @{self.name}: {item} is not in your inventory." + reset)
+                return
         else:
-            print(red + f"ERROR: @{user.name}: {item.name} is not an item." + reset)
+            print(red + f"ERROR: @{self.name}: {item} is not an item." + reset)
+            return
+        self.holding = itemobj
 
     def wear(self, item):
-        self.wearing = item
+        itemobj = None
+        if isinstance(item, Item):
+            if item in self.inv.values():
+                itemobj = item
+            else:
+                print(red + f"ERROR: @{self.name}: {item} is not in your inventory." + reset)
+                return
+        elif isinstance(item, str):
+            if item in self.inv:
+                itemobj = self.inv[item]
+            else:
+                print(red + f"ERROR: @{self.name}: {item} is not in your inventory." + reset)
+                return
+        else:
+            print(red + f"ERROR: @{self.name}: {item} is not an item." + reset)
+            return
+        self.wearing = itemobj
 
 
     def attack(self, target):
         if isinstance(target, Player):
             if isinstance(self.holding, Weapon):
-                target.setHP(target.hp-self.holding.dmg)
-                print(f"@{self.name}: {target.name} took {self.holding.dmg} damage. ({str(target.hp)}/{str(target.mhp)})")
+                effectivedmg =  self.holding.dmg - target.wearing.strength
+                if effectivedmg < 0:
+                    effectivedmg = 0
+                    target.setHP(target.hp)
+                else:
+                    target.setHP(target.hp-effectivedmg+target.wearing.strength)
+                print(f"@{self.name}: {target.name} took {effectivedmg} damage. ({str(target.hp)}/{str(target.mhp)})")
             else:
                 print(red + f"ERROR: @{self.name}: {self.holding.name} is not a weapon." + reset)
         else:
@@ -152,6 +183,12 @@ class Weapon(Item):
         self.dmg = dmg
 
 
+class Armour(Item):
+    def __init__(self, name, desc, owner, strength):
+        Item.__init__(self, name, desc, owner)
+        self.strength = strength
+
+
 class Cmd:
     def __init__(self, name, func, *args):
         self.name = name
@@ -169,18 +206,20 @@ def getTargetUser(cmd, players, user):
 def main():
     print("\x1b[2J\x1b[H")
     print("TaRPiG - Text Roleplaying game")
-    emptyplayer = Player("emptyplayer", 3000, 3000, "")
+    emptyplayer = Player("emptyplayer", 1, 3000, "")
     emptyobj0 = Item("empty0", "", emptyplayer)
     emptyobj1 = Item("empty1", "", emptyplayer)
     emptyobj2 = Item("empty2", "", emptyplayer)
     emptyobj3 = Item("empty3", "", emptyplayer)
+    emptyarm0 = Armour("emptyarm0", "", emptyplayer, 200)
 
     testplayer = Player("testplayer", 29, 30, "")
     user = Player("user", 4, 4,  "")
-    emptyweapon0 = Weapon("emptyweapon0", "", user, 28)
+    emptyweapon0 = Weapon("emptyweapon0", "", user, 22)
     players = {emptyplayer.name: emptyplayer, user.name: user, testplayer.name: testplayer}
     user.hold(emptyweapon0)
     emptyplayer.hold(emptyobj0)
+    emptyplayer.wear(emptyarm0)
     castle = Loc(5, "castle")
     # hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
     # smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
@@ -213,12 +252,13 @@ def main():
                 print(user.getinv())
             elif cmd[0] == "hold":
                 user.hold(cmd[1])
+            elif cmd[0] == "wear":
+                user.wear(cmd[1])
             elif cmd[0] == "gift":
                 user.mvinv(getTargetUser(cmd, players, user), cmd[2])
             else:
                 if cmd[0] != "":
                     print(red + f"ERROR: @{user.name}: \"{cmd[0]}\" is not a command." + reset)
-            print(emptyplayer.getinv())
         except (KeyboardInterrupt, EOFError):
             print()
             break
