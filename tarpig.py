@@ -12,9 +12,26 @@ reset = "\x1b[1;0m"
 
 
 class Loc:
-    def __init__(self, cord, name):
+    def __init__(self, cord, name, desc, players, items):
         self.cord = cord
         self.name = name
+        self.desc = desc
+        self.players = {}
+        self.objs = {}
+
+    def addplayer(self, player):
+        self.players[player] = player
+
+    def mvplayer(self, target, player):
+        target.players[player] = self.players[player]
+        del self.players[player]
+
+    def additem(self, item):
+        self.items[item] = item
+
+    def mvitem(self, target, item):
+        target.items[item] = self.items[item]
+        del self.items[item]
 
 
 class Player:
@@ -26,6 +43,7 @@ class Player:
         self.inv = {}
         self.holding = None
         self.wearing = None
+        self.gold = 0
         self.loc = loc
 
     def health(self):
@@ -78,15 +96,17 @@ class Player:
         output = f"@{self.name}: Inventory:\n"
         for (k, v) in self.inv.items():
             if v == self.holding:
-                output += " *" + k + "\n"
+                output += " *" + v.name + v.desc + "\n"
             elif v == self.wearing:
-                output += "**" + k + "\n"
+                output += "**" + v.name + v.desc + "\n"
             else:
-                output += "  " + k + "\n"
+                output += "  " + v.name + v.desc + "\n"
+        output += f"Gold: {self.gold}\n"
         return output
 
     def addinv(self, item):
-        self.inv[item.name] = item
+        if isinstance(item, Item):
+            self.inv[item.name] = item
 
 
     def mvinv(self, target, item):
@@ -146,7 +166,16 @@ class Player:
             print(red + f"ERROR: @{self.name}: {item} is not an item." + reset)
             return
         self.wearing = itemobj
+    
+    def addgold(self, amount):
+        if self.gold + amount < 0:
+            print(red + f"ERROR: @{self.name}: Not enough money." + reset)
+        else:
+            self.gold += amount
 
+    def pay(self, target, amount):
+        target.addgold(amount)
+        self.addgold(-amount)
 
     def attack(self, target):
         if isinstance(target, Player):
@@ -156,7 +185,7 @@ class Player:
                     effectivedmg = 0
                     target.setHP(target.hp)
                 else:
-                    target.setHP(target.hp-effectivedmg+target.wearing.strength)
+                    target.setHP(target.hp-effectivedmg)
                 print(f"@{self.name}: {target.name} took {effectivedmg} damage. ({str(target.hp)}/{str(target.mhp)})")
             else:
                 print(red + f"ERROR: @{self.name}: {self.holding.name} is not a weapon." + reset)
@@ -172,21 +201,30 @@ class Item:
         self.owner.addinv(self)
 
 
+
+
+
 class Heal(Item):
     def __init__(self, name, desc, owner, amount):
         Item.__init__(self, name, desc, owner)
         self.amount = amount
+        if self.desc != "":
+            self.desc = f" -- +{self.amount} HP ({self.count}) -- " + self.desc
 
 class Weapon(Item):
     def __init__(self, name, desc, owner, dmg):
         Item.__init__(self, name, desc, owner)
         self.dmg = dmg
+        if self.desc != "":
+            self.desc = f" -- {self.dmg} DMG -- " + self.desc
 
 
 class Armour(Item):
     def __init__(self, name, desc, owner, strength):
         Item.__init__(self, name, desc, owner)
         self.strength = strength
+        if self.desc != "":
+            self.desc = f"-{self.strength} DMG -- " + self.desc
 
 
 class Cmd:
@@ -206,21 +244,24 @@ def getTargetUser(cmd, players, user):
 def main():
     print("\x1b[2J\x1b[H")
     print("TaRPiG - Text Roleplaying game")
-    emptyplayer = Player("emptyplayer", 1, 3000, "")
+    emptyplayer = Player("emptyplayer", 30, 3000, "")
     emptyobj0 = Item("empty0", "", emptyplayer)
     emptyobj1 = Item("empty1", "", emptyplayer)
     emptyobj2 = Item("empty2", "", emptyplayer)
     emptyobj3 = Item("empty3", "", emptyplayer)
-    emptyarm0 = Armour("emptyarm0", "", emptyplayer, 200)
+    emptyarm0 = Armour("emptyarm0", "", emptyplayer, 11)
 
     testplayer = Player("testplayer", 29, 30, "")
     user = Player("user", 4, 4,  "")
-    emptyweapon0 = Weapon("emptyweapon0", "", user, 22)
+    emptyweapon0 = Weapon("emptyweapon0", "an emptyweapon", user, 10)
+    emptyweapon1 = Weapon("emptyweapon1", "", user, 201)
+    emptyheal0 = Heal("emptyheal0", "", user, 1)
+    emptyheal1 = Heal("emptyheal1", "", user, 1)
     players = {emptyplayer.name: emptyplayer, user.name: user, testplayer.name: testplayer}
     user.hold(emptyweapon0)
     emptyplayer.hold(emptyobj0)
     emptyplayer.wear(emptyarm0)
-    castle = Loc(5, "castle")
+    ###############castle = Loc(5, "castle")
     # hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
     # smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
 
@@ -235,7 +276,7 @@ def main():
         try:
             cmd = input("> ")
             cmd = cmd.strip()
-            cmd = cmd.split(" ")
+            cmd = cmd.split()
             if cmd[0].lower() in ("quit", "q", "exit"):
                 break
 
@@ -249,16 +290,20 @@ def main():
             elif cmd[0] == "heal":
                 user.heal(cmd[1])
             elif cmd[0] in ("inventory", "inv", "i"):
-                print(user.getinv())
+                print(user.getinv(), end="")
             elif cmd[0] == "hold":
                 user.hold(cmd[1])
             elif cmd[0] == "wear":
                 user.wear(cmd[1])
             elif cmd[0] == "gift":
                 user.mvinv(getTargetUser(cmd, players, user), cmd[2])
+            elif cmd[0] == "info":
+                for attribute in cmd[1]:
+                    print(attribute)
             else:
                 if cmd[0] != "":
                     print(red + f"ERROR: @{user.name}: \"{cmd[0]}\" is not a command." + reset)
+            print(cmd)
         except (KeyboardInterrupt, EOFError):
             print()
             break
