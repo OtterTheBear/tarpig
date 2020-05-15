@@ -275,8 +275,11 @@ def main():
     while True:
         try:
             cmd = input("> ")
-            cmd = cmd.strip()
-            cmd = cmd.split()
+            if cmd == "":
+                continue
+            else:
+                cmd = cmd.strip()
+                cmd = cmd.split()
             if cmd[0].lower() in ("quit", "q", "exit"):
                 break
 
@@ -303,10 +306,10 @@ def main():
             else:
                 if cmd[0] != "":
                     print(red + f"ERROR: @{user.name}: \"{cmd[0]}\" is not a command." + reset)
-            print(cmd)
         except (KeyboardInterrupt, EOFError):
             print()
             break
+
         except IndexError:
             print(red + f"ERROR: not enough arguments." + reset)
         except:
