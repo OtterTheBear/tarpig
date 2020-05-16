@@ -12,26 +12,54 @@ reset = "\x1b[1;0m"
 
 
 class Loc:
-    def __init__(self, cord, name, desc, players, items):
+    def __init__(self, cord, name, desc):
         self.cord = cord
         self.name = name
         self.desc = desc
         self.players = {}
-        self.objs = {}
+        self.items = {}
 
     def addplayer(self, player):
-        self.players[player] = player
+        self.players[player.name] = player
 
     def mvplayer(self, target, player):
-        target.players[player] = self.players[player]
-        del self.players[player]
-
-    def additem(self, item):
-        self.items[item] = item
+        target.players[player.name] = self.players[player]
+        del self.players[player.name]
+    ## THE BUG IS BELOW
+    def additem(self, item, player):
+        itemobj = None
+        if isinstance(item, Item):
+            self.items[item.name] = player.inv[item.name]
+        elif isinstance(item, str):
+            self.items[item] = player.inv[item]
+        else:
+            print("err")
+            return
 
     def mvitem(self, target, item):
-        target.items[item] = self.items[item]
-        del self.items[item]
+        target.items[item.name] = self.items[item]
+        del self.items[item.name]
+
+    def getplayers(self):
+        for x in self.players.values():
+            print(x.name)
+
+    def fulldesc(self):
+        output = "Location: " + self.name + "\nDescription: " + self.desc + "\nItems:\n"
+        if len(self.items) == 0:
+            output += "  (None)\n"
+        else:
+            for x in self.items.values():
+                output += "  " + x.name + "\n"
+
+        output += "Players:\n"
+
+        if len(self.players) == 0:
+            output += "  (None)\n"
+        else:
+            for x in self.players.values():
+                output += "  " + x.name + "\n"
+            return output
 
 
 class Player:
@@ -45,6 +73,7 @@ class Player:
         self.wearing = None
         self.gold = 0
         self.loc = loc
+        self.loc.addplayer(self)
 
     def health(self):
         output = "["
@@ -66,6 +95,31 @@ class Player:
 
     def getLoc(self):
         print(f"@{self.name}: Location: {self.loc.name}.")
+
+    def drop(self, item):
+        itemobj = None
+        if isinstance(item, Item):
+            itemobj = self.inv[item.name]
+        elif isinstance(item, str):
+            itemobj = self.inv[item]
+
+        if itemobj == self.holding:
+            self.holding = None
+        if itemobj == self.wearing:
+            self.wearing == None
+        self.loc.additem(itemobj.name, self)
+        del self.inv[itemobj.name]
+
+    def grab(self, item):
+        itemobj = None
+        if isinstance(item, Item):
+            itemobj = self.loc.items[item.name]
+        elif isinstance(item, str):
+            itemobj = self.loc.items[item]
+        else:
+            return
+        self.inv[itemobj.name] = itemobj
+        del self.loc.items[itemobj.name]
 
     def heal(self, heal):
         healobj = None
@@ -201,9 +255,6 @@ class Item:
         self.owner.addinv(self)
 
 
-
-
-
 class Heal(Item):
     def __init__(self, name, desc, owner, amount):
         Item.__init__(self, name, desc, owner)
@@ -211,12 +262,15 @@ class Heal(Item):
         if self.desc != "":
             self.desc = f" -- +{self.amount} HP ({self.count}) -- " + self.desc
 
+
 class Weapon(Item):
     def __init__(self, name, desc, owner, dmg):
         Item.__init__(self, name, desc, owner)
         self.dmg = dmg
         if self.desc != "":
             self.desc = f" -- {self.dmg} DMG -- " + self.desc
+        else:
+            self.desc = f" -- {self.dmg} DMG"
 
 
 class Armour(Item):
@@ -244,15 +298,16 @@ def getTargetUser(cmd, players, user):
 def main():
     print("\x1b[2J\x1b[H")
     print("TaRPiG - Text Roleplaying game")
-    emptyplayer = Player("emptyplayer", 30, 3000, "")
+    field = Loc(0, "Field", "a location")
+    emptyplayer = Player("emptyplayer", 30, 3000, field)
     emptyobj0 = Item("empty0", "", emptyplayer)
     emptyobj1 = Item("empty1", "", emptyplayer)
     emptyobj2 = Item("empty2", "", emptyplayer)
     emptyobj3 = Item("empty3", "", emptyplayer)
     emptyarm0 = Armour("emptyarm0", "", emptyplayer, 11)
 
-    testplayer = Player("testplayer", 29, 30, "")
-    user = Player("user", 4, 4,  "")
+    testplayer = Player("testplayer", 29, 30, field)
+    user = Player("user", 4, 4,  field)
     emptyweapon0 = Weapon("emptyweapon0", "an emptyweapon", user, 10)
     emptyweapon1 = Weapon("emptyweapon1", "", user, 201)
     emptyheal0 = Heal("emptyheal0", "", user, 1)
@@ -275,7 +330,7 @@ def main():
     while True:
         try:
             cmd = input("> ")
-            if cmd == "":
+            if cmd.strip() == "":
                 continue
             else:
                 cmd = cmd.strip()
@@ -288,7 +343,7 @@ def main():
                     user.attack(getTargetUser(cmd, players, user))
                 else:
                     raise IndexError
-            elif cmd[0] == "health":
+            elif cmd[0] in ("h", "health"):
                 getTargetUser(cmd, players, user).health()
             elif cmd[0] == "heal":
                 user.heal(cmd[1])
@@ -300,9 +355,15 @@ def main():
                 user.wear(cmd[1])
             elif cmd[0] == "gift":
                 user.mvinv(getTargetUser(cmd, players, user), cmd[2])
-            elif cmd[0] == "info":
-                for attribute in cmd[1]:
-                    print(attribute)
+            elif cmd[0] == "\x24\x24":
+                for x in range(9):
+                    getTargetUser(cmd, players, user).gold += 9
+            elif cmd[0] in ("l", "location", "loc"):
+                print(user.loc.fulldesc())
+            elif cmd[0] in ("d", "drop"):
+                user.drop(cmd[1])
+            elif cmd[0] in ("g", "grab"):
+                user.grab(cmd[1])
             else:
                 if cmd[0] != "":
                     print(red + f"ERROR: @{user.name}: \"{cmd[0]}\" is not a command." + reset)
