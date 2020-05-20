@@ -25,7 +25,7 @@ class Loc:
     def mvplayer(self, target, player):
         target.players[player.name] = self.players[player]
         del self.players[player.name]
-    ## THE BUG IS BELOW
+    
     def additem(self, item, player):
         itemobj = None
         if isinstance(item, Item):
@@ -58,7 +58,7 @@ class Loc:
             output += "  (None)\n"
         else:
             for x in self.players.values():
-                output += "  " + x.name + "\n"
+                output += "  " + x.name + " " +  ("(Living)" if x.living else "(Dead)") + "\n"
             return output
 
 
@@ -232,9 +232,10 @@ class Player:
         self.addgold(-amount)
 
     def attack(self, target):
+        targetsArmourStrength = (0 if target.wearing == None else target.wearing.strength)
         if isinstance(target, Player):
             if isinstance(self.holding, Weapon):
-                effectivedmg =  self.holding.dmg - target.wearing.strength
+                effectivedmg =  self.holding.dmg - targetsArmourStrength
                 if effectivedmg < 0:
                     effectivedmg = 0
                     target.setHP(target.hp)
