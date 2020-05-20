@@ -74,6 +74,7 @@ class Player:
         self.gold = 0
         self.loc = loc
         self.loc.addplayer(self)
+        self.talktext = "There was no response."
 
     def health(self):
         output = "["
@@ -247,6 +248,9 @@ class Player:
         else:
             print(red + f"ERROR: @{self.name}: {target.name} is not a person/animal" + reset)
 
+    def talk(self, target):
+        print((target.name.upper() + ": " if target.talktext != "There was no response." else "") + target.talktext )
+
 
 class Item:
     def __init__(self, name, desc, owner):
@@ -317,6 +321,7 @@ def main():
     user.hold(emptyweapon0)
     emptyplayer.hold(emptyobj0)
     emptyplayer.wear(emptyarm0)
+    testplayer.talktext = "talk"
     ###############castle = Loc(5, "castle")
     # hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
     # smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
@@ -365,6 +370,8 @@ def main():
                 user.drop(cmd[1])
             elif cmd[0] in ("g", "grab"):
                 user.grab(cmd[1])
+            elif cmd[0] in ("t", "talk"):
+                user.talk(getTargetUser(cmd, players, user))
             else:
                 if cmd[0] != "":
                     print(red + f"ERROR: @{user.name}: \"{cmd[0]}\" is not a command." + reset)
