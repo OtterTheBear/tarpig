@@ -75,6 +75,7 @@ class Player:
         self.loc = loc
         self.loc.addplayer(self)
         self.talktext = "There was no response."
+        self.qtext = ""
 
     def health(self):
         output = "["
@@ -265,7 +266,9 @@ class Heal(Item):
         Item.__init__(self, name, desc, owner)
         self.amount = amount
         if self.desc != "":
-            self.desc = f" -- +{self.amount} HP ({self.count}) -- " + self.desc
+            self.desc = f" -- +{self.amount} HP -- " + self.desc
+        else:
+            self.desc = f" -- +{self.amount} HP"
 
 
 class Weapon(Item):
@@ -284,13 +287,6 @@ class Armour(Item):
         self.strength = strength
         if self.desc != "":
             self.desc = f"-{self.strength} DMG -- " + self.desc
-
-
-class Cmd:
-    def __init__(self, name, func, *args):
-        self.name = name
-        self.func = func
-        self.args = args
 
 def getTargetUser(cmd, players, user):
     if len(cmd) > 1:
@@ -321,7 +317,7 @@ def main():
     user.hold(emptyweapon0)
     emptyplayer.hold(emptyobj0)
     emptyplayer.wear(emptyarm0)
-    testplayer.talktext = "talk"
+    testplayer.talktext = "Waazzzzzzzzzzzzzzaaaaaaaaaaaaaap!"
     ###############castle = Loc(5, "castle")
     # hmm = Player("hmm", 5, 10, True, [], poop, "apple", castle)
     # smh = Player("smh", 5, 10, True, [], poop, "apple", castle)
@@ -334,6 +330,9 @@ def main():
     print("You are standing in a field")
 
     while True:
+        if not user.living:
+            print("You died.")
+            break
         try:
             cmd = input("> ")
             if cmd.strip() == "":
